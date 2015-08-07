@@ -1,4 +1,4 @@
-function saveTightFigure(h,outfilename)
+function saveTightFigure(h, outfilename)
 % SAVETIGHTFIGURE(OUTFILENAME) Saves the current figure without the white
 %   space/margin around it to the file OUTFILENAME. Output file type is
 %   determined by the extension of OUTFILENAME. All formats that are
@@ -9,57 +9,76 @@ function saveTightFigure(h,outfilename)
 % E Akbas (c) Aug 2010
 % * Updated to handle subplots and multiple axes. March 2014. 
 %
+% -- edits --
+% 2015-08-06 SAL    - create tighter figures if axes labels don't exist
 
-if nargin==1
-    hfig = gcf;
-    outfilename = h;
-else 
-    hfig = h;
-end
 
 %% find all the axes in the figure
-hax = findall(hfig, 'type', 'axes');
+h = gcf;
+haxes = findall(h, 'type', 'axes');
 
-%% compute the tighest box that includes all axes
-tighest_box = [Inf Inf -Inf -Inf]; % left bottom right top
-for i=1:length(hax)
-    set(hax(i), 'units', 'centimeters');
+%% compute the tightest box that includes all axes
+tightestBox = [Inf Inf -Inf -Inf]; % left bottom right top
+for i=1:length(haxes)
+    set(haxes(i), 'units', 'centimeters');
     
-    p = get(hax(i), 'position');
-    ti = get(hax(i), 'tightinset');
+    % http://www.mathworks.com/help/matlab/creating_plots/automatic-axes-resize.html
+    p = get(haxes(i), 'position');
+    ti = get(haxes(i), 'tightinset'); % margins in [left bottom right top] direction
+    
+    adjustPos = [0 0 0 0];
+    if ~isempty(get(get(haxes(i), 'xlabel'), 'string'))
+        adjustPos(1) = -ti(1);
+    end
+    if ~isempty(get(get(haxes(i), 'ylabel'), 'string'))
+        adjustPos(2) = -ti(2);
+    end
+    if strcmp(get(haxes(i),'tag'), 'Colorbar')
+        adjustPos(3) = ti(3);
+    end
+    % sidenote: image left/bottom position changes when add colorbar, but
+    % position property does not update to reflect new position
+    if ~isempty(get(get(haxes(i), 'title'), 'string'))
+        adjustPos(4) = ti(4);
+    end
     
     % get position as left, bottom, right, top
-    p = [p(1) p(2) p(1)+p(3) p(2)+p(4)] + ti.*[-1 -1 1 1];
+    pos = [p(1) p(2) p(1)+p(3) p(2)+p(4)] + adjustPos;
     
-    tighest_box(1) = min(tighest_box(1), p(1));
-    tighest_box(2) = min(tighest_box(2), p(2));
-    tighest_box(3) = max(tighest_box(3), p(3));
-    tighest_box(4) = max(tighest_box(4), p(4));
+    tightestBox(1) = min(tightestBox(1), pos(1));
+    tightestBox(2) = min(tightestBox(2), pos(2));
+    tightestBox(3) = max(tightestBox(3), pos(3));
+    tightestBox(4) = max(tightestBox(4), pos(4));
 end
 
-%% move all axes to left-bottom
-for i=1:length(hax)
-    if strcmp(get(hax(i),'tag'),'legend')
+%% move all axes to bottom-left of figure
+for i=1:length(haxes)
+    if strcmp(get(haxes(i),'tag'), 'legend')
         continue
     end
-    p = get(hax(i), 'position');
-    set(hax(i), 'position', [p(1)-tighest_box(1) p(2)-tighest_box(2) p(3) p(4)]);
+    p = get(haxes(i), 'position');
+    set(haxes(i), 'position', [p(1)-tightestBox(1) p(2)-tightestBox(2) p(3) p(4)]);
 end
 
 %% resize figure to fit tightly
-set(hfig, 'units', 'centimeters');
-p = get(hfig, 'position');
+set(h, 'units', 'centimeters');
+p = get(h, 'position');
 
-width = tighest_box(3)-tighest_box(1);
-height =  tighest_box(4)-tighest_box(2); 
-set(hfig, 'position', [p(1) p(2) width height]);
+width = tightestBox(3)-tightestBox(1);
+height =  tightestBox(4)-tightestBox(2); 
+set(h, 'position', [p(1) p(2) width height]); % only need to change width and height
 
 %% set papersize
-set(hfig,'PaperUnits','centimeters');
-set(hfig,'PaperSize', [width height]);
-set(hfig,'PaperPositionMode', 'manual');
-set(hfig,'PaperPosition',[0 0 width height]);
-
+% saveas will still add white space around figure unless paper size is adjusted
+set(h,'PaperUnits','centimeters');
+set(h,'PaperSize', [width height]);
+set(h,'PaperPositionMode', 'manual');
+set(h,'PaperPosition',[0 0 width height]);
 
 %% save
-saveas(hfig,outfilename);
+% default to png if file extention not specified
+[~, name, ext] = fileparts(outfilename);
+if isempty(ext)
+    outfilename = strcat(name, '.png');
+end
+saveas(h, outfilename);
