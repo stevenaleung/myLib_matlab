@@ -14,7 +14,6 @@ function saveTightFigure(h, outfilename)
 
 
 %% find all the axes in the figure
-h = gcf;
 haxes = findall(h, 'type', 'axes');
 
 %% compute the tightest box that includes all axes
@@ -27,11 +26,13 @@ for i=1:length(haxes)
     ti = get(haxes(i), 'tightinset'); % margins in [left bottom right top] direction
     
     adjustPos = [0 0 0 0];
-    if ~isempty(get(get(haxes(i), 'xlabel'), 'string'))
+    if ~isempty(get(get(haxes(i), 'xlabel'), 'string')) || ~isempty(get(haxes(i), 'xtick'))
         adjustPos(1) = -ti(1);
+        adjustPos(3) = ti(3);
     end
-    if ~isempty(get(get(haxes(i), 'ylabel'), 'string'))
+    if ~isempty(get(get(haxes(i), 'ylabel'), 'string')) || ~isempty(get(haxes(i), 'ytick'))
         adjustPos(2) = -ti(2);
+        adjustPos(4) = ti(4);
     end
     if strcmp(get(haxes(i),'tag'), 'Colorbar')
         adjustPos(3) = ti(3);
