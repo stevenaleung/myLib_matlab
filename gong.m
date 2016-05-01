@@ -1,4 +1,4 @@
 function playEOF()
 
 load gong.mat;
-sound(y);
+soundsc(y, [-30 30]);
