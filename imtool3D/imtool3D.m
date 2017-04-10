@@ -275,7 +275,17 @@ classdef imtool3D < handle
             tool.handles.Axes           =   axes('Position',[0 0 1 1],'Parent',tool.handles.Panels.Image,'Color','none');
             tool.handles.I              =   imshow(I(:,:,1),range); hold on; set(tool.handles.I,'Clipping','off')
             set(tool.handles.Axes,'XLimMode','manual','YLimMode','manual','Clipping','off');
-            
+            % set default colormap to parula/jet. if matlab is version R2014b
+            % (8.4) or after, then use parula
+            % https://www.mathworks.com/products/matlab/whatsnew.html SAL
+            % 2017-04-10
+            v = ver('matlab');
+            if str2double(v.Version) < 8.4
+                colormap(gca, 'jet');
+            else
+                colormap(gca, 'parula');
+            end
+
             
             %Set up the binary mask viewer
             im=zeros(size(I,1),size(I,2),3);
@@ -397,7 +407,16 @@ classdef imtool3D < handle
             lp=lp+2.5*w;
             
             %Create colormap pulldown menu
-            mapNames={'Gray','Hot','Jet','HSV','Cool','Spring','Summer','Autumn','Winter','Bone','Copper','Pink','Lines','colorcube','flag','prism','white'};
+            % if matlab is version R2014b (8.4) or after, then include parula in
+            % the list of colormaps
+            % https://www.mathworks.com/products/matlab/whatsnew.html SAL
+            % 2017-04-10
+            v = ver('matlab');
+            if str2double(v.Version) < 8.4
+                mapNames={'Jet','Gray','Hot','HSV','Cool','Spring','Summer','Autumn','Winter','Bone','Copper','Pink','Lines','colorcube','flag','prism','white'};
+            else
+                mapNames={'Parula','Gray','Jet','Hot','HSV','Cool','Spring','Summer','Autumn','Winter','Bone','Copper','Pink','Lines','colorcube','flag','prism','white'};
+            end
             tool.handles.Tools.Color          =   uicontrol(tool.handles.Panels.Tools,'Style','popupmenu','String',mapNames,'Position',[lp buff 4*w w]);
             fun=@(hObject,evnt) changeColormap(hObject,evnt,tool);
             set(tool.handles.Tools.Color,'Callback',fun)
@@ -792,7 +811,7 @@ end
 function changeColormap(hObject,eventdata,tool)
 n=get(hObject,'Value');
 maps=get(hObject,'String');
-colormap(maps{n})
+colormap(gca, maps{n})
 end
 
 function displayHelp(hObject,evnt,tool)
