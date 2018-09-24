@@ -1,4 +1,4 @@
-function gitInfo=getGitInfo()
+function gitInfo = getGitInfo()
 % Get information about the Git repository in the current directory, including: 
 %          - branch name of the current Git Repo 
 %          -Git SHA1 HASH of the most recent commit
@@ -56,51 +56,56 @@ function gitInfo=getGitInfo()
 % authors and should not be interpreted as representing official policies, either expressed
 % or implied, of <copyright holder>.
 
- gitInfo=[];
+
+%% determine if there's a git directory
+gitInfo = [];
 if ~exist('.git','file') || ~exist('.git/HEAD','file')
-    %Git is not present
+    fprintf('git is not present');
     return
 end
 
 
-
+%% find the file that contains the SHA1
 %Read in the HEAD information, this will tell us the location of the file
 %containing the SHA1
 text=fileread('.git/HEAD');
 parsed=textscan(text,'%s');
 
+% 2017-03-15 SAL
+% determine if the head is in a detached state
 if ~strcmp(parsed{1}{1},'ref:') || ~length(parsed{1})>1
-        %the HEAD is not in the expected format.
-        %give up
-        return
+    isHeadDetached = true;
+else
+    isHeadDetached = false;
 end
 
-path=parsed{1}{2};
-[pathstr, name, ext]=fileparts(path);
-branchName=name;
+% find the branch and SHA1
+if isHeadDetached
+    gitInfo.branch = '';
+    gitInfo.hash = parsed{1}{1};
+else
+    path=parsed{1}{2};
+    [pathstr, name, ext]=fileparts(path);
+    gitInfo.branch = name;
 
-%save branchname
-gitInfo.branch=branchName;
+    %Read in SHA1
+    SHA1text=fileread(fullfile(['.git/' pathstr],[name ext]));
+    SHA1=textscan(SHA1text,'%s');
+    gitInfo.hash=SHA1{1}{1};
+end
 
 
-%Read in SHA1
-SHA1text=fileread(fullfile(['.git/' pathstr],[name ext]));
-SHA1=textscan(SHA1text,'%s');
-gitInfo.hash=SHA1{1}{1};
-
-
+%% find the remote and remote url corresponding to the current commit
 %Read in config file
 config=fileread('.git/config');
 %Find everything space delimited
 temp=textscan(config,'%s','delimiter','\n');
 lines=temp{1};
 
-remote='';
 %Lets find the name of the remote corresponding to our branchName
 for k=1:length(lines)
-    
     %Are we at the section describing our branch?
-    if strcmp(lines{k},['[branch "' branchName '"]'])
+    if strcmp(lines{k},['[branch "' gitInfo.branch '"]'])
         m=k+1;
         %While we haven't run out of lines
         %And while we haven't run into another section (which starts with
@@ -115,17 +120,14 @@ for k=1:length(lines)
             end
             
             m=m+1;
-        end
-        
-        
-    
+        end 
     end
 end
 
 % 2016-05-25 SAL
 % if the current branch is not being tracked, it won't show up in the
 % config file. therefore we have to find the name of the remote another way
-if strcmp(remote, '')
+if ~exist('remote', 'var')
     for k = 1:length(lines)
         line = lines{k};
         % iterate through the lines and fine the line that specifies the
@@ -144,7 +146,6 @@ gitInfo.remote=remote;
 url='';
 %Find the remote's url
 for k=1:length(lines)
-    
     %Are we at the section describing our branch?
     if strcmp(lines{k},['[remote "' remote '"]'])
         m=k+1;
@@ -162,9 +163,6 @@ for k=1:length(lines)
             
             m=m+1;
         end
-        
-        
-    
     end
 end
 
