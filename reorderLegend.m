@@ -1,4 +1,4 @@
-function out = reorderLegend(order,h)
+function [h, outputLabels] = reorderLegend(order,h)
 % reorderLegend 
 %   Re-orders the legend entries 
 %   (without modifying the actual order the curves are stacked on the axes)
@@ -42,8 +42,8 @@ function out = reorderLegend(order,h)
     if nargin == 0 || isempty(order)
         % output/display the internal order
         lbl = get(hC,{'DisplayName'});        
-        if nargout == 1 
-            out = lbl;
+        if nargout == 2 
+            outputLabels = lbl;
         else
             for k = 1:length(lbl)
                display([sprintf('[%*d] ',fix(log10(length(lbl)))+1,k) lbl{k}]);
@@ -52,6 +52,6 @@ function out = reorderLegend(order,h)
         
     else
        % reorder the legend entries 
-       legend(hC(order)); 
+       h = legend(hC(order)); 
     end
 end
